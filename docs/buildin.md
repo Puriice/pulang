@@ -13,7 +13,7 @@ Parameters:
 -   string
     -   String to be printed
 -   bool? default=true
-    -   Indicate whether a new line charactor should auto append
+    -   Specifies whether to automatically add newline characters.
 
 Return Values:
 Number of charecters printed
