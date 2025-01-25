@@ -3,7 +3,7 @@
 Here is how we declare a simple variable.
 
 ```
-	string hello = "Hello World"
+string hello = "Hello World"
 ```
 
 ## Data type
