@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include "structures/graph.h"
+#include "lexical.h"
 
 int main(int argc, char **argv) {
 	if (argc < 2) {
@@ -12,6 +14,11 @@ int main(int argc, char **argv) {
 		perror("Can't open file");
 	}
 
+	Token *temp = malloc(sizeof(Token));
+	lexicalAnalyze(entry, temp);
+
 	fclose(entry);
+	free(temp);
+	free(getValidTokens());
 	return 0;
 }

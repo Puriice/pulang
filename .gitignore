@@ -1,5 +1,6 @@
 build/
 input/
+playground/
 .vscode/
 
 .DS_Store
