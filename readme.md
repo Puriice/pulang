@@ -13,7 +13,7 @@ To-do lists:
 ### Utils
 
 -   (-) Data structures
-    -   (-) Hashmap
+    -   (x) Hashmap
     -   ( ) Linked List
     -   ( ) Graph
     -   ( ) Tree

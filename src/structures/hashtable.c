@@ -102,65 +102,63 @@ bool incease_table_size(HashTable* table) {
 // hashing using FNV-1a algorithm
 // TODO: Change to SipHash algorithm
 // REASONS: Security concern: Hash flooding DDOS
-uint64_t hash(const uint64_t key) {
+uint64_t hash(const void *data, size_t len) {
 	uint64_t hash = FNV_OFFSET_BASIS;
+	const uint8_t *bytes = (const uint8_t*) data;
 
-	for (size_t i = 0; i < 8; i++)
+	for (size_t i = 0; i < len; i++)
 	{
-		uint8_t key_byte = key >> (8 * i) & 0xFF;
-		
-		hash = hash ^ key_byte;
+		hash = hash ^ bytes[i];
 		hash = hash * FNV_PRIME;
 	}
 	
 	return hash;
 }
 
-uint64_t str_to_key(const char *s_key) {
-	uint64_t sum = 0;
-	for (int i = 0; s_key[i] != '\0'; i++) {  // Loop through each character
-        sum += (int) s_key[i];
-    }
-
-	return sum;
-}
-
-uint8_t get_node(HashTable *table, const char *key, HashNode** output) {
-	uint64_t ui_key = str_to_key(key);
-	uint64_t hash_value = hash(ui_key);
+/**
+ * @brief Get the hash node from table
+ * 
+ * @param table 
+ * @param key 
+ * @param key_len 
+ * @param output 
+ * @return * uint8_t If the key is found, the index of hash node in the table is returned. Otherwise, the last search index is returned.
+ * 
+ */
+uint8_t get_node(HashTable *table, const void *key, size_t key_len, HashNode** output) {
+	uint64_t hash_value = hash(key, key_len);
 	uint64_t index;
 	uint8_t i = 0;
 	
 	do {
 		index = INDEX(hash_value, i);
 		i++;
-	} while (table->nodes[index].is_occupied && strcmp(table->nodes[index].key, key) != 0);
+	} while (table->nodes[index].is_occupied && strcmp(table->nodes[index].key, key) != 0 && i < table->capacity);
 
 	if (!table->nodes[index].is_occupied || strcmp(table->nodes[index].key, key) != 0) {
 		*output = NULL;
-		return i;
+		return index;
 	}
 
 	*output = &table->nodes[index];
-	return i;
+	return index;
 }
 
-void* get_from_table(HashTable *table, const char *key) {
+void* get_from_table(HashTable *table, const void *key, size_t key_len) {
 	HashNode* node = NULL;
-	get_node(table, key, &node);
+	get_node(table, key, key_len, &node);
 
 	if (node == NULL) return NULL;
 
 	return node->data;
 }
 
-bool insert_to_table(HashTable *table, char *key, void *data, size_t data_size) {
-	uint64_t ui_key = str_to_key(key);
-	uint64_t hash_value = hash(ui_key);
+bool insert_to_table(HashTable *table, const void *key, size_t key_len, void *data, size_t data_len) {
+	uint64_t hash_value = hash(key, key_len);
 	uint64_t index;
 	uint8_t i = 0;
 
-	if (table->count/table->capacity > LOAD_FACTOR_THRESHOLD) {
+	if ((float)table->count/table->capacity > LOAD_FACTOR_THRESHOLD) {
 		bool is_success = incease_table_size(table);
 
 		if (!is_success && table->count == table->capacity) return false;
@@ -168,33 +166,38 @@ bool insert_to_table(HashTable *table, char *key, void *data, size_t data_size) 
 
 	do {
 		index = INDEX(hash_value, i);
-		printf("index: %llu, i: %u\n", index, i);
+		// printf("index: %llu, i: %u\n", index, i);
 		i++;
 	} while (table->nodes[index].is_occupied);
 
 	table->nodes[index].hash = hash_value;
 	table->nodes[index].key = strdup(key);
-	table->nodes[index].data = malloc(data_size);
-	memcpy(table->nodes[index].data, data, data_size);
+	table->nodes[index].data = malloc(data_len);
+	memcpy(table->nodes[index].data, data, data_len);
 	table->nodes[index].is_occupied = true;
 	table->count++;
 
 	return true;
 }
 
-bool replace_in_table(HashTable *table, char *key, void *data, size_t data_size) {
+bool replace_in_table(HashTable *table, const void *key, size_t key_len, void *data, size_t data_len) {
 	HashNode *node = NULL; 
-	uint16_t index = get_node(table, key, &node);
-	uint64_t ui_key = str_to_key(key);
-	uint64_t hash_value = hash(ui_key);
+	uint16_t index = get_node(table, key, key_len, &node);
+	uint64_t hash_value = hash(key, key_len);
 
+	// key is not in the node
 	if (node == NULL) {
+		// The hashmap is full, increase the size and insert.
+		if (table->nodes[index].is_occupied) {
+			return insert_to_table(table, key, key_len, data, data_len);
+		}
+
 		table->nodes[index].hash = hash_value;
-		
+
 		table->nodes[index].key = strdup(key);
 
-		table->nodes[index].data = malloc(data_size);
-		memcpy(table->nodes[index].data, data, data_size);
+		table->nodes[index].data = malloc(data_len);
+		memcpy(table->nodes[index].data, data, data_len);
 
 		table->nodes[index].is_occupied = true;
 		table->count++;
@@ -202,23 +205,21 @@ bool replace_in_table(HashTable *table, char *key, void *data, size_t data_size)
 		return true;
 	}
 
-	if (node->is_occupied) {
-		free(node->key);
-		free(node->data);
-	}
+	free(node->key);
+	free(node->data);
 
 	node->hash = hash_value;
 	node->key = strdup(key);
-	node->data = malloc(data_size);
-	memcpy(node->data, data, data_size);
+	node->data = malloc(data_len);
+	memcpy(node->data, data, data_len);
 	node->is_occupied = true;
 
 	return true;
 }
 
-bool delete_in_table(HashTable *table, char *key) {
+bool delete_in_table(HashTable *table, const void *key, size_t key_len) {
 	HashNode* node = NULL;
-	get_node(table, key, &node);
+	get_node(table, key, key_len, &node);
 
 	if (node == NULL) return false;
 

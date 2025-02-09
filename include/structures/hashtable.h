@@ -1,3 +1,4 @@
+#pragma once
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -23,15 +24,15 @@ typedef struct
 
 HashTable* create_table(size_t capacity);
 
-uint64_t hash(const uint64_t key);
+uint64_t hash(const void *key, size_t len);
 
-void* get_from_table(HashTable *table, const char *key);
+void* get_from_table(HashTable *table, const void *key, size_t key_len);
 
-bool insert_to_table(HashTable *table, char *key, void* data, size_t data_size);
+bool insert_to_table(HashTable *table, const void *key, size_t key_len, void* data, size_t data_len);
 
-bool replace_in_table(HashTable *table, char *key, void* data, size_t data_size);
+bool replace_in_table(HashTable *table, const void *key, size_t key_len, void* data, size_t data_len);
 
-bool delete_in_table(HashTable *table, char *key);
+bool delete_in_table(HashTable *table, const void *key, size_t key_len);
 
 void free_table(HashTable *table);
 
