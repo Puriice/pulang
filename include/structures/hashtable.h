@@ -8,9 +8,10 @@
 typedef struct node
 {
 	uint64_t hash;
-	char* key;
-	void* data;
+	size_t key_len;
 	bool is_occupied;
+	void* key;
+	void* data;
 } HashNode;
 
 
@@ -20,7 +21,6 @@ typedef struct
 	size_t capacity;
 	size_t count;
 } HashTable;
-
 
 HashTable* create_table(size_t capacity);
 
